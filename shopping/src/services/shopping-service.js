@@ -53,6 +53,7 @@ class ShoppingService {
   }
 
   async SubscribeEvents(payload) {
+    payload = JSON.parse(payload);
     const { event, data } = payload;
 
     const { userId, product, qty } = data;
@@ -73,7 +74,7 @@ class ShoppingService {
     try {
       if (order) {
         const payload = { data: { userId, order }, event };
-        return FormateData(payload);
+        return payload;
       }
     } catch (error) {
       return FormateData({ error: "Not found order" });

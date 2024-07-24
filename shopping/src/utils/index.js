@@ -1,6 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-
+const amqplib = require("amqplib");
 const {
   APP_SECRET,
   EXCHANGE_NAME,
@@ -85,7 +85,9 @@ module.exports.SubscribeMessage = async (channel, service) => {
     const appQueue = await channel.assertQueue(QUEUE_NAME);
     channel.bindQueue(appQueue.queue, EXCHANGE_NAME, SHOPPING_BINDING_KEY);
     channel.consume(appQueue.queue, (data) => {
-      console.log("receive data: ", data.content.toString());
+      console.log("receive data from shopping: ");
+      console.log(data.content.toString());
+      service.SubscribeEvents(data.content.toString());
       channel.ack(data);
     });
   } catch (error) {

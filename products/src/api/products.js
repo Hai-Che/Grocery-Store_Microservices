@@ -96,12 +96,11 @@ module.exports = (app, channel) => {
 
   app.put("/cart", UserAuth, async (req, res, next) => {
     const { _id } = req.user;
-    const { productId, qty } = req.body;
 
     try {
       const { data } = await service.GetProductPayload(
         _id,
-        { productId, qty },
+        { productId: req.body._id, qty: req.body.qty },
         "ADD_TO_CART"
       );
       // PublishCustomerEvent(data);
