@@ -70,7 +70,6 @@ module.exports = (app, channel) => {
       "ADD_TO_WISHLIST"
     );
     try {
-      // PublishCustomerEvent(data);
       PublishMessage(channel, CUSTOMER_BINDING_KEY, JSON.stringify(data));
       return res.status(200).json(data.data.product);
     } catch (err) {}
@@ -86,7 +85,6 @@ module.exports = (app, channel) => {
         { productId },
         "REMOVE_FROM_WISHLIST"
       );
-      // PublishCustomerEvent(data);
       PublishMessage(channel, CUSTOMER_BINDING_KEY, JSON.stringify(data));
       return res.status(200).json(data.data.product);
     } catch (err) {
@@ -103,8 +101,6 @@ module.exports = (app, channel) => {
         { productId: req.body._id, qty: req.body.qty },
         "ADD_TO_CART"
       );
-      // PublishCustomerEvent(data);
-      // PublishShoppingEvent(data);
       PublishMessage(channel, CUSTOMER_BINDING_KEY, JSON.stringify(data));
       PublishMessage(channel, SHOPPING_BINDING_KEY, JSON.stringify(data));
 
@@ -129,8 +125,6 @@ module.exports = (app, channel) => {
         { productId },
         "REMOVE_FROM_CART"
       );
-      // PublishCustomerEvent(data);
-      // PublishShoppingEvent(data);
       PublishMessage(channel, CUSTOMER_BINDING_KEY, JSON.stringify(data));
       PublishMessage(channel, SHOPPING_BINDING_KEY, JSON.stringify(data));
       const response = {

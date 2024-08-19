@@ -14,7 +14,6 @@ module.exports = (app, channel) => {
       const { data } = await service.PlaceOrder({ _id, txnNumber });
       const payload = await service.GetOrderPayload(_id, data, "CREATE_ORDER");
       PublishMessage(channel, CUSTOMER_BINDING_KEY, JSON.stringify(payload));
-      // PublishCustomerEvent(payload);
       return res.status(200).json(data);
     } catch (err) {
       next(err);
