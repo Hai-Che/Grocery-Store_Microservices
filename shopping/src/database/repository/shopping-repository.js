@@ -1,123 +1,125 @@
-const { CustomerModel, OrderModel, CartModel } = require("../models");
+const { OrderModel, CartModel, WishlistModel } = require("../models");
 const { v4: uuidv4 } = require("uuid");
-const { APIError, BadRequestError } = require("../../utils/app-errors");
+const _ = require("lodash");
 
 //Dealing with data base operations
 class ShoppingRepository {
-  // payment
-
-  async Orders(customerId) {
-    try {
-      const orders = await OrderModel.find({ customerId });
-      return orders;
-    } catch (err) {
-      throw APIError(
-        "API Error",
-        STATUS_CODES.INTERNAL_ERROR,
-        "Unable to Find Orders"
-      );
-    }
-  }
-
+  // Cart
   async Cart(customerId) {
-    try {
-      const cart = await CartModel.findOne({ customerId });
-      if (!cart) {
-        throw new Error("Cart not found");
+    return CartModel.findOne({ customerId });
+  }
+
+  async ManageCart(customerId, product, qty, isRemove) {
+    const cart = await CartModel.findOne({ customerId });
+    if (cart) {
+      if (isRemove) {
+        const cartItems = _.filter(
+          cart.items,
+          (item) => item.product._id !== product._id
+        );
+        cart.items = cartItems;
+        // handle remove case
+      } else {
+        const cartIndex = _.findIndex(cart.items, {
+          product: { _id: product._id },
+        });
+        if (cartIndex > -1) {
+          cart.items[cartIndex].unit = qty;
+        } else {
+          cart.items.push({ product: { ...product }, unit: qty });
+        }
       }
-      return cart;
-    } catch (error) {
-      throw error;
+      return await cart.save();
+    } else {
+      // create a new one
+      return await CartModel.create({
+        customerId,
+        items: [{ product: { ...product }, unit: qty }],
+      });
     }
   }
 
-  async AddCartItem(customerId, item, qty, isRemove) {
-    try {
-      const cart = await CartModel.findOne({ customerId });
-      const { _id } = item;
-
-      if (cart) {
-        let isExist = false;
-        let cartItems = cart.items;
-        if (cartItems.length > 0) {
-          cartItems.map((item) => {
-            if (item.product._id.toString() === _id.toString()) {
-              if (isRemove) {
-                cartItems.splice(cartItems.indexOf(item), 1);
-              } else {
-                item.unit = qty;
-              }
-              isExist = true;
-            }
-          });
-        }
-        if (!isExist && !isRemove) {
-          cartItems.push({ product: { ...item }, unit: qty });
-        }
-        cart.items = cartItems;
-        return await cart.save();
+  async ManageWishlist(customerId, product_id, isRemove = false) {
+    const wishlist = await WishlistModel.findOne({ customerId });
+    if (wishlist) {
+      if (isRemove) {
+        const products = _.filter(
+          wishlist.products,
+          (product) => product._id !== product_id
+        );
+        wishlist.products = products;
+        // handle remove case
       } else {
-        const newCard = await CartModel.create({
-          customerId,
-          items: [{ product: { ...item }, unit: qty }],
+        const wishlistIndex = _.findIndex(wishlist.products, {
+          _id: product_id,
         });
-        return newCard;
+        if (wishlistIndex < 0) {
+          wishlist.products.push({ _id: product_id });
+        }
       }
-    } catch (err) {
-      throw new APIError(
-        "API Error",
-        STATUS_CODES.INTERNAL_ERROR,
-        "Unable to Create Customer"
-      );
+      return await wishlist.save();
+    } else {
+      // create a new one
+      return await WishlistModel.create({
+        customerId,
+        wishlist: [{ _id: product_id }],
+      });
+    }
+  }
+
+  async GetWishlistByCustomerId(customerId) {
+    return WishlistModel.findOne({ customerId });
+  }
+
+  async Orders(customerId, orderId) {
+    if (orderId) {
+      return OrderModel.findOne({ _id: orderId });
+    } else {
+      return OrderModel.find({ customerId });
     }
   }
 
   async CreateNewOrder(customerId, txnId) {
-    //check transaction for payment Status
+    const cart = await CartModel.findOne({ customerId: customerId });
 
-    try {
-      const cart = await CartModel.findOne({ customerId });
+    if (cart) {
+      let amount = 0;
 
-      if (cart) {
-        let amount = 0;
+      let cartItems = cart.items;
 
-        let cartItems = cart.items;
+      if (cartItems.length > 0) {
+        //process Order
 
-        if (cartItems.length > 0) {
-          //process Order
-          cartItems.map((item) => {
-            amount += parseInt(item.product.price) * parseInt(item.unit);
-          });
+        cartItems.map((item) => {
+          amount += parseInt(item.product.price) * parseInt(item.unit);
+        });
 
-          const orderId = uuidv4();
+        const orderId = uuidv4();
 
-          const order = new OrderModel({
-            orderId,
-            customerId,
-            amount,
-            txnId,
-            status: "received",
-            items: cartItems,
-          });
+        const order = new OrderModel({
+          orderId,
+          customerId,
+          amount,
+          status: "received",
+          items: cartItems,
+        });
 
-          cart.items = [];
+        cart.items = [];
 
-          const orderResult = await order.save();
-
-          await cart.save();
-
-          return orderResult;
-        }
+        const orderResult = await order.save();
+        await cart.save();
+        return orderResult;
       }
-
-      return {};
-    } catch (err) {
-      throw APIError(
-        "API Error",
-        STATUS_CODES.INTERNAL_ERROR,
-        "Unable to Find Category"
-      );
     }
+
+    return {};
+  }
+
+  async deleteProfileData(customerId) {
+    return Promise.all([
+      CartModel.findOneAndDelete({ customerId }),
+      WishlistModel.findOneAndDelete({ customerId }),
+    ]);
   }
 }
 

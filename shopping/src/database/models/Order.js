@@ -8,7 +8,6 @@ const OrderSchema = new Schema(
     customerId: String,
     amount: Number,
     status: String,
-    txnId: String,
     items: [
       {
         product: {
